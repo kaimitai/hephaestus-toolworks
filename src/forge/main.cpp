@@ -1,44 +1,75 @@
+#include <algorithm>
 #include <format>
 #include <iostream>
 #include <core/klib/Kfile.h>
-#include <core/rom/Rom_manager.h>
-#include <core/script/ScriptString.h>
+#include <core/script/ScriptLoader.h>
+#include <string>
 
 int main(int argc, char** argv) try {
 
 	const auto rom{ klib::file::read_file_as_bytes("c:/temp/boo/boo-us.nes") };
-	rom::ROM_Manager mgr(8);
 
-	script::CharacterTables tables;
-	tables.initialize_default();
-	script::ScriptString str(rom,
-		mgr.cpu_addr_to_rom_offset(5, 0x9e53),
-		tables);
+	script::ScriptLoader loader;
+	loader.parse_rom(rom, 5, 0x8000);
+	auto layer{ loader.get_script_layer() };
 
-	std::cout << "\"" << str.get_string() << "\"\n" ;
+	std::vector<std::size_t> addrs;
+	for (const auto& [addr, _] : layer.instructions)
+		addrs.push_back(addr);
 
-	return 0;
+	std::sort(addrs.begin(), addrs.end());
 
+	std::unordered_set<std::size_t> labels;
 
-	auto script_ptrs_addr{ mgr.read_word(rom, 5, 0x8000) };
-	auto script_ptr_count{ mgr.get_ptr_table_size(rom, 5, script_ptrs_addr) };
+	// entrypoints
+	for (const auto& world : layer.ptr_table)
+		for (auto ep : world)
+			labels.insert(ep);
 
-	std::cout << std::format("Script ptrs: {:04x}", script_ptrs_addr) << "\n";
+	// jump targets
+	for (const auto& [_, instr] : layer.instructions)
+		if (instr.jump_target)
+			labels.insert(*instr.jump_target);
 
-	for (std::size_t i{ 0 }; i < script_ptr_count; ++i) {
-		auto sub_ptrs{ mgr.read_word(rom,5,script_ptrs_addr + 2 * i) };
-		auto sub_ptr_count{ mgr.get_ptr_table_size(rom, 5, sub_ptrs) };
+	// entrypoint reverse map
+	std::unordered_map<std::size_t, std::vector<std::pair<std::size_t, std::size_t>>> ep_map;
 
-		auto offset{ mgr.read_word(rom, 5, sub_ptrs) };
-
-		std::cout << i << ": " << sub_ptr_count << " - First: " <<
-			std::format("{:04x}", offset)
-			<< "\n";
+	for (std::size_t w = 0; w < layer.ptr_table.size(); ++w) {
+		for (std::size_t r = 0; r < layer.ptr_table[w].size(); ++r) {
+			ep_map[layer.ptr_table[w][r]].emplace_back(w, r);
+		}
 	}
 
-	std::size_t stringstart{ mgr.cpu_addr_to_rom_offset(5, 0x9e38) };
-	std::cout << std::format("\n\nString start: {:04x}", stringstart);
+	std::string asmfile;
 
+	for (auto addr : addrs) {
+
+		// print entrypoint annotations
+		if (ep_map.contains(addr)) {
+			for (auto [w, r] : ep_map[addr]) {
+				asmfile += std::format("; W{} R{}\n", w, r);
+			}
+		}
+
+		if (labels.contains(addr))
+			asmfile += std::format("@loc_{:04x}:\n", addr);
+
+		const auto& instr = layer.instructions.at(addr);
+		const auto& op = layer.opcodes.at(instr.opcode);
+
+		asmfile += std::format("\t{}", op.mnemonic);
+
+		if (instr.arg)
+			asmfile += std::format(" {}", instr.arg.value());
+		if (instr.jump_target)
+			asmfile += std::format(" @loc_{:04x}", instr.jump_target.value());
+		if (instr.string)
+			asmfile += std::format(" \"{}\"", instr.string.value());
+
+		asmfile += "\n";
+	}
+
+	klib::file::write_string_to_file(asmfile, "c:/temp/boo/boo-us.asm");
 	return 0;
 }
 catch (const std::exception& ex) {
