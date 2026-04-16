@@ -14,10 +14,9 @@ namespace rom {
 
 		std::vector<word> cpu_bases;
 
-		std::size_t cpu_addr_to_rom_offset(std::size_t p_bank_no, cpu_addr p_cpu_addr) const;
-		
 	public:
 		ROM_Manager(std::size_t p_bank_count);
+		std::size_t cpu_addr_to_rom_offset(std::size_t p_bank_no, cpu_addr p_cpu_addr) const;
 
 		word read_word(const std::vector<byte>& p_rom, std::size_t p_offset) const;
 		word read_word(const std::vector<byte>& p_rom, std::size_t p_bank, cpu_addr p_cpu_addr) const;

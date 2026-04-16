@@ -1,4 +1,5 @@
 #include "ROM_Manager.h"
+#include "NES_constants.h"
 #include <algorithm>
 #include <format>
 #include <stdexcept>
@@ -31,13 +32,13 @@ std::size_t rom::ROM_Manager::cpu_addr_to_rom_offset(std::size_t p_bank_no,
 		);
 	const auto cpu_base{ cpu_bases[p_bank_no] };
 
-	if (p_cpu_addr < cpu_base || p_cpu_addr >= cpu_base + 0x4000)
+	if (p_cpu_addr < cpu_base || p_cpu_addr >= cpu_base + c::BANK_SIZE)
 		throw std::runtime_error(
 			std::format("Invalid cpu address: ${:04x} (must be ${:04x}-${:04x})",
-				p_cpu_addr, cpu_base, cpu_base + 0x4000 - 1)
+				p_cpu_addr, cpu_base, cpu_base + c::BANK_SIZE - 1)
 		);
 
-	std::size_t bank_start{ 0x10 + 0x4000 * p_bank_no };
+	std::size_t bank_start{ c::INES_HEADER_SIZE + c::BANK_SIZE * p_bank_no };
 
 	return bank_start + p_cpu_addr - cpu_base;
 }
