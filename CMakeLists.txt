@@ -21,6 +21,6 @@ file(GLOB_RECURSE FORGE_SOURCES CONFIGURE_DEPENDS
     src/forge/*.cpp
 )
 
-add_executable(hephaestus.forge ${FORGE_SOURCES})
+add_executable(forge ${FORGE_SOURCES})
 
-target_link_libraries(hephaestus.forge PRIVATE hephaestus.core)
+target_link_libraries(forge PRIVATE hephaestus.core)
