@@ -4,8 +4,10 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <vector>
 
 using byte = uint8_t;
+using cpu_addr = uint16_t;
 
 namespace script {
 
@@ -16,6 +18,11 @@ namespace script {
 		std::optional<std::size_t> jump_target;
 		std::optional<std::size_t> string_ref;
 		std::optional<std::string> string;
+		std::optional<std::size_t> byte_offset;
+
+		std::vector<byte> to_bytes(std::optional<byte> p_jmp_target,
+			std::optional<cpu_addr> p_string_ref) const;
+		std::size_t size(void) const;
 	};
 
 }

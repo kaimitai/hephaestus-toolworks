@@ -4,6 +4,7 @@
 #include "ScriptString.h"
 #include "Opcode.h"
 #include "Instruction.h"
+#include "ScriptLayer.h"
 #include "./../rom/ROM_Manager.h"
 #include <cstdint>
 #include <unordered_map>
@@ -14,15 +15,6 @@
 using byte = uint8_t;
 
 namespace script {
-
-	struct NormalizedScriptLayer {
-		// maps instruction index to vector of (world, room) having that instruction as entrypt
-		std::unordered_map<std::size_t, std::vector<std::pair<std::size_t, std::size_t>>> ptr_table;
-		// sequential instructions; instructions with string refs have index values that reference...
-		std::vector<Instruction> instructions;
-		// ...the actual strings
-		std::vector<std::string> strings;
-	};
 
 	class ScriptLoader {
 
@@ -42,7 +34,7 @@ namespace script {
 		void initialize_opcodes(void);
 		void parse_rom(const std::vector<byte>& p_rom,
 			std::size_t p_master_ptr_bank, std::size_t p_master_ptr_cpu_offset);
-		NormalizedScriptLayer get_normalized_script_layer(void) const;
+		ScriptLayer get_normalized_script_layer(void) const;
 	};
 
 }

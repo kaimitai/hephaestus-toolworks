@@ -132,7 +132,7 @@ void script::ScriptLoader::parse_blob_from_entrypoint(const std::vector<byte>& p
 	}
 }
 
-script::NormalizedScriptLayer script::ScriptLoader::get_normalized_script_layer(void) const {
+script::ScriptLayer script::ScriptLoader::get_normalized_script_layer(void) const {
 
 	// sort all instruction and string offsets
 	std::vector<std::size_t> offsets, string_offsets;
@@ -176,7 +176,7 @@ script::NormalizedScriptLayer script::ScriptLoader::get_normalized_script_layer(
 	for (const auto& kv : ptr_table)
 		norm_ptr_table[offset_to_index[kv.first]] = kv.second;
 
-	return script::NormalizedScriptLayer{
+	return script::ScriptLayer{
 		.ptr_table = norm_ptr_table,
 		.instructions = norm_instructions,
 		.strings = norm_strings
