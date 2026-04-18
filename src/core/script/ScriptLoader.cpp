@@ -11,10 +11,10 @@ using cpu_addr = uint16_t;
 script::ScriptLoader::ScriptLoader(void) :
 	rom_mgr{ rom::ROM_Manager(8) }
 {
-	initialize_opcodes();
 }
 
 void script::ScriptLoader::parse_rom(const std::vector<byte>& p_rom,
+	const std::unordered_map<byte, Opcode>& opcodes,
 	std::size_t p_master_ptr_bank, std::size_t p_master_ptr_cpu_addr) {
 
 	auto world_ptr_table{ rom_mgr.read_word(p_rom, p_master_ptr_bank, p_master_ptr_cpu_addr) };
@@ -53,14 +53,14 @@ void script::ScriptLoader::parse_rom(const std::vector<byte>& p_rom,
 			};
 
 			ptr_table[rom_ptr_offset].push_back(std::make_pair(i, j));
-			parse_blob_from_entrypoint(p_rom, p_master_ptr_bank, rom_ptr_offset);
+			parse_blob_from_entrypoint(p_rom, opcodes, p_master_ptr_bank, rom_ptr_offset);
 		}
 	}
 
 }
 
 void script::ScriptLoader::parse_blob_from_entrypoint(const std::vector<byte>& p_rom,
-	std::size_t p_bank_no, std::size_t addr) {
+	const std::unordered_map<byte, Opcode>& opcodes, std::size_t p_bank_no, std::size_t addr) {
 
 	while (true) {
 
@@ -92,7 +92,7 @@ void script::ScriptLoader::parse_blob_from_entrypoint(const std::vector<byte>& p
 
 			instr.jump_target = target;
 
-			parse_blob_from_entrypoint(p_rom, p_bank_no, target);
+			parse_blob_from_entrypoint(p_rom, opcodes, p_bank_no, target);
 
 			if (op.flow == Flow::Jump) {
 				instructions[instr_addr] = std::move(instr);
@@ -180,26 +180,5 @@ script::ScriptLayer script::ScriptLoader::get_normalized_script_layer(void) cons
 		.ptr_table = norm_ptr_table,
 		.instructions = norm_instructions,
 		.strings = norm_strings
-	};
-}
-
-void script::ScriptLoader::initialize_opcodes(void) {
-	opcodes = {
-		{0x00, {"SetNPC", Flow::Continue, ArgType::Byte, ArgDomain::NPC}},
-		{0x01, {"IfNotFlag", Flow::ConditionalJump, ArgType::Byte, ArgDomain::Flag}},
-		{0x02, {"Jump", Flow::Jump, ArgType::None, ArgDomain::None}},
-		{0x03, {"Msg", Flow::Continue, ArgType::PointerString, ArgDomain::None}},
-		{0x04, {"End", Flow::End, ArgType::None, ArgDomain::None}},
-		{0x05, {"SetFlag", Flow::Continue, ArgType::Byte, ArgDomain::Flag}},
-		{0x06, {"ClearFlag", Flow::Continue, ArgType::Byte, ArgDomain::Flag}},
-		{0x07, {"IfFlag", Flow::ConditionalJump, ArgType::Byte, ArgDomain::Flag}},
-		{0x08, {"GetItem", Flow::Continue, ArgType::Byte, ArgDomain::Flag}},
-		{0x09, {"MsgEnd", Flow::End, ArgType::ImmediateString, ArgDomain::None}},
-		{0x0a, {"IfDecline", Flow::ConditionalJump, ArgType::None, ArgDomain::None}},
-		{0x0b, {"IfSkins", Flow::ConditionalJump, ArgType::None, ArgDomain::None}},
-		{0x0c, {"IfOlives", Flow::ConditionalJump, ArgType::Byte, ArgDomain::None}},
-		{0x0d, {"PasswordEnd", Flow::End, ArgType::None, ArgDomain::None}},
-		{0x0e, {"HealthEnd", Flow::End, ArgType::None, ArgDomain::None}},
-		{0x0f, {"NectarEnd", Flow::End, ArgType::None, ArgDomain::None}}
 	};
 }
