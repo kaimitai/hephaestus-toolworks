@@ -19,8 +19,8 @@ ht::htConfig::htConfig(void) {
 	{0x08, {"GetItem", Flow::Continue, ArgType::Byte, ArgDomain::Flag}},
 	{0x09, {"MsgEnd", Flow::End, ArgType::ImmediateString, ArgDomain::None}},
 	{0x0a, {"IfDecline", Flow::ConditionalJump, ArgType::None, ArgDomain::None}},
-	{0x0b, {"IfSkins", Flow::ConditionalJump, ArgType::None, ArgDomain::None}},
-	{0x0c, {"IfOlives", Flow::ConditionalJump, ArgType::Byte, ArgDomain::None}},
+	{0x0b, {"IfSkinsLessThan20", Flow::ConditionalJump, ArgType::None, ArgDomain::None}},
+	{0x0c, {"IfOlivesLessThan", Flow::ConditionalJump, ArgType::Byte, ArgDomain::None}},
 	{0x0d, {"PasswordEnd", Flow::End, ArgType::None, ArgDomain::None}},
 	{0x0e, {"HealthEnd", Flow::End, ArgType::None, ArgDomain::None}},
 	{0x0f, {"NectarEnd", Flow::End, ArgType::None, ArgDomain::None}}
@@ -129,24 +129,16 @@ ht::htConfig::htConfig(void) {
 			{0x3e, "NPC_MAN_STAFF_BLACK"},
 			{0x3f, "NPC_WOMAN_STAFF_BLACK"},
 
-			{0x40,"NPC_ZEUS"},
-			{0x41, "NPC_TODO_41"},
-			{0x42, "NPC_TODO_42"},
-			{0x43, "NPC_TODO_43"},
-			{0x44, "NPC_TODO_44"},
-			{0x45, "NPC_TODO_45"},
-			{0x46, "NPC_TODO_46"},
-			{0x51, "NPC_TODO_47"},
-			{0x54, "NPC_TODO_48"},
-			{0x55, "NPC_TODO_49"},
+			{0x40, "NPC_ZEUS"},
+			{0x41, "NPC_GODDESS"},
+			{0x42, "NPC_GOD"},
+			{0x43, "NPC_GOD_MESSENGER"},
+
 			{0x60, "NPC_FAIRY_PINK"},
 			{0x61, "NPC_FAIRY_GREEN"},
 			{0x62, "NPC_FAIRY_PURPLE"},
 			{0x63, "NPC_FAIRY_BLUE"},
-			{0x64, "NPC_TODO_64"},
-			{0x65, "NPC_TODO_65"},
-			{0x66, "NPC_TODO_66"},
-			{0x67, "NPC_TODO_67"},
+
 			{0x80, "NPC_NOBODY"},
 			{0xc0, "NPC_WALL"}
 			}

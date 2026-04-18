@@ -2,6 +2,7 @@
 #include <format>
 #include <iostream>
 #include <core/klib/Kfile.h>
+#include <core/klib/KString.h>
 #include <core/htConfig.h>
 #include <core/script/ScriptLoader.h>
 #include <core/script/ScriptAssembler.h>
@@ -11,17 +12,51 @@
 #include <core/app_constants.h>
 #include <string>
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 constexpr std::size_t SCRIPT_BANK_NO{ 5 }, BANK_COUNT{ 8 };
 constexpr cpu_addr SCRIPT_MASTER_PTR{ 0x8000 };
 
+static std::string get_final_out_nes_file(const std::string& p_out_file) {
+	std::string result{ p_out_file };
+
+	if (p_out_file.size() >= 4) {
+		std::string ext{ p_out_file.substr(p_out_file.size() - 4) };
+		if (klib::str::str_equals_icase(ext, ".nes"))
+			result = p_out_file.substr(0, p_out_file.size() - 4);
+	}
+
+	result += "-out.nes";
+	return result;
+}
+
+// sad that this is needed in 2026
+static void output_oe_on_windows(void) {
+
+#ifdef _WIN32
+	UINT old_cp = GetConsoleOutputCP();
+	SetConsoleOutputCP(CP_UTF8);
+#endif
+
+	std::cout << "ø";
+
+#ifdef _WIN32
+	SetConsoleOutputCP(old_cp);
+#endif
+}
+
 int main(int argc, char** argv) try {
 	std::cout << ht::appc::APP_NAME << " version " << ht::appc::APP_VERSION << " (" <<
-		ht::appc::APP_URL << ")\nBy Kai E. Froeland <kai.froland@gmail.com>\nBuild date: " <<
+		ht::appc::APP_NAME_FORGE << ")\n" << ht::appc::APP_URL << "\n\nBy Kai E. Fr";
+	output_oe_on_windows();
+	std::cout << "land <kai.froland@gmail.com>\nBuild date : " <<
 		__DATE__ << " " << __TIME__ << " CET\n\n";
 
 	if (argc != 4) {
-		std::cout << argv[0] << " x us.nes us.asm - Extracts scripting layer from us.nes to us.asm\n" <<
-			"forge b us.asm us.nes - Builds scripting layer in us.asm and patches us.nes\n\n";
+		std::cout << "Usage:\n  forge x <input.nes> <output.asm>    Extract scripting layer from ROM\n" <<
+			"  forge b <input.asm> <output.nes>    Build and patch ROM from ASM\n\nSee the documentation for details\n\n";
 		return 0;
 	}
 
@@ -57,8 +92,8 @@ int main(int argc, char** argv) try {
 			100.0f * (static_cast<float>(used_space) / static_cast<float>(avail_space))
 		};
 
-		std::cout << "Used space: " << used_space << ", available space: " << avail_space <<
-			std::format(" ({:0.2f}% used)\n", pct);
+		std::cout << "Used space: " << used_space << " of " << avail_space <<
+			std::format(" available bytes ({:0.2f}%)\n", pct);
 
 		if (used_space > avail_space) {
 			std::cout << "Script layer too big to fit in bank\n\n";
@@ -72,7 +107,7 @@ int main(int argc, char** argv) try {
 		for (std::size_t i{ 0 }; i < bytes.size(); ++i)
 			rom.at(i + rom_offset) = bytes[i];
 
-		std::string patchedfile{ outfile + "-out.nes" };
+		std::string patchedfile{ get_final_out_nes_file(outfile) };
 		klib::file::write_bytes_to_file(rom, patchedfile);
 		std::cout << "Patched ROM written to " << patchedfile << "!\n\n";
 	}

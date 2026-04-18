@@ -11,6 +11,7 @@ namespace ht {
 		constexpr std::string_view APP_VERSION{ "beta-1" };
 		constexpr std::string_view APP_URL{ "https://github.com/kaimitai/hephaestus-toolworks" };
 
+		constexpr std::string_view APP_NAME_FORGE{ "Forge" };
 	}
 
 }
