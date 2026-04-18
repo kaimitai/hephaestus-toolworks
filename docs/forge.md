@@ -228,8 +228,4 @@ If the script exceeds available space, patching will fail.
 
 ## Status
 
-This documentation reflects the current understanding of the scripting system.
-
-Some behavior is inferred and may be refined over time.
-
 Please contact the author for bug reports, suggestions or if you have useful information to share.
