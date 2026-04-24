@@ -127,6 +127,7 @@ void script::ScriptLoader::parse_blob_from_entrypoint(const std::vector<byte>& p
 		instructions[instr_addr] = std::move(instr);
 
 		// sript ends here
+		// TODO: SetNPC 0x80 / 0xc0 also end script, check the 6502 asm and make this bullet-proof
 		if (op.flow == Flow::End)
 			return;
 	}
