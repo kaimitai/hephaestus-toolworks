@@ -1,12 +1,26 @@
 #include "htConfig.h"
+#include "config_constants.h"
+#include <format>
+#include <stdexcept>
 
 using script::Flow;
 using script::ArgDomain;
 using script::ArgType;
 
 ht::htConfig::htConfig(void) {
-
 	// TODO: Get from xml
+	addresses = {
+		{c::ID_WORLD_DEFINITIONS_ADDR, Address(7, 0xcfb0)},
+		{c::ID_CHR_TRANSFERSCRIPT_ADDR, Address(7, 0xe633)},
+		{c::ID_SHARED_BG_PALETTE_ADDR, Address(7, 0xd016)}
+	};
+
+	counts = {
+		{c::ID_WORLD_COUNT, 12},
+		{c::ID_SPRITE_CHR_BANK_COUNT, 52},
+		{c::ID_CHR_TRANSFERSCRIPT_COUNT, 22},
+	};
+
 	scriptConfig.opcodes = {
 	{0x00, {"SetNPC", Flow::Continue, ArgType::Byte, ArgDomain::NPC}},
 	{0x01, {"IfNotFlag", Flow::ConditionalJump, ArgType::Byte, ArgDomain::Flag}},
@@ -29,6 +43,7 @@ ht::htConfig::htConfig(void) {
 	scriptConfig.defines = {
 		{
 		ArgDomain::Flag, {
+			{0x00, "ITEM_CLUB"},
 			{0x01, "ITEM_STAFF_OF_FENNEL"},
 			{0x02, "ITEM_NYMPH_SWORD"},
 			{0x03, "ITEM_DIVINE_SWORD"},
@@ -48,7 +63,7 @@ ht::htConfig::htConfig(void) {
 			{0x16, "ITEM_AMBROSIA_1"},
 			{0x17, "ITEM_AMBROSIA_2"},
 			{0x18, "ITEM_AMBROSIA_3"},
-			{0x1c, "FLAG_NECTAR_GOT"},
+			{0x1c, "FLAG_NECTAR_FULL"},
 			{0x1f, "FLAG_CHILD_RESCUED"},
 			{0x20, "FLAG_HERMES_MISSED"},
 			{0x21, "FLAG_FENNEL_UPGRADED"},
@@ -148,4 +163,22 @@ ht::htConfig::htConfig(void) {
 
 const ht::ScriptConfig& ht::htConfig::get_script_config(void) const {
 	return scriptConfig;
+}
+
+std::size_t ht::htConfig::count(const std::string& p_id) const {
+	auto iter{ counts.find(p_id) };
+	if (iter != end(counts))
+		return iter->second;
+	else throw std::runtime_error(
+		std::format("Could not find count constant '{}'", p_id)
+	);
+}
+
+ht::Address ht::htConfig::get_address(const std::string& p_id) const {
+	auto iter{ addresses.find(p_id) };
+	if (iter != end(addresses))
+		return iter->second;
+	else throw std::runtime_error(
+		std::format("Could not find address constant '{}'", p_id)
+	);
 }

@@ -13,7 +13,8 @@ namespace comp {
 	public:
 		RLE(void) = default;
 
-		std::vector<byte> decompress(const std::vector<byte>& p_bytes, std::size_t p_expected_size) const;
+		std::vector<byte> decompress(const std::vector<byte>& p_bytes, std::size_t p_expected_size,
+			std::size_t p_offset = 0) const;
 		std::vector<byte> compress(const std::vector<byte>& p_bytes) const;
 	};
 

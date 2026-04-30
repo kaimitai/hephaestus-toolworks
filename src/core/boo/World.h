@@ -1,12 +1,12 @@
 #ifndef BOO_WORLD_H
 #define BOO_WORLD_H
 
-#include <array>
 #include <cstdint>
 #include <vector>
 #include "boo_constants.h"
 #include "Metatile.h"
 #include "Screen.h"
+#include "./../nes/ChrTile.h"
 
 using byte = uint8_t;
 using word = uint16_t;
@@ -15,8 +15,11 @@ namespace boo {
 
 	struct World {
 
-		std::array<Metatile, c::WORLD_METATILE_COUNT> metatiles;
+		std::vector<Metatile> metatiles;
 		std::vector<Screen> screens;
+		std::vector<nes::ChrTile> tileset;
+		// 3x3 palette indexes, bg col is $0f and the last sub-palette is shared at the game-level
+		std::vector<std::vector<byte>> world_palettes;
 
 	};
 

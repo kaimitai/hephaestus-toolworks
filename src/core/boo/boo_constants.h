@@ -15,6 +15,8 @@ namespace boo {
 		constexpr std::size_t WORLD_METATILE_COUNT{ 64 };
 		constexpr std::size_t WORLD_PALETTE_BYTE_SIZE{ 9 };
 		constexpr std::size_t BANK_COUNT{ 8 };
+		constexpr std::size_t WORLD_TILESET_CHR_COUNT{ 0x40 };
+		constexpr byte SHARED_BG_PALETTE_COLOR{ 0x0f };
 
 		// screen decode VM
 		constexpr byte SCREEN_DATA_OP_TILEMAP_DECOMPRESS{ 0b00 };

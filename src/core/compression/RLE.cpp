@@ -2,12 +2,13 @@
 #include "compression_constants.h"
 #include <stdexcept>
 
-std::vector<byte> comp::RLE::decompress(const std::vector<byte>& p_bytes, std::size_t p_expected_size) const {
+std::vector<byte> comp::RLE::decompress(const std::vector<byte>& p_bytes,
+	std::size_t p_expected_size, std::size_t p_offset) const {
 	std::vector<byte> out;
 	out.reserve(p_expected_size);
 
-	size_t i = 0;
-	byte last = 0;
+	size_t i{ p_offset };
+	byte last{ 0 };
 	bool have_last = false;
 
 	while (out.size() < p_expected_size) {
