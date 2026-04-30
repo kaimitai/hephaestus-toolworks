@@ -51,7 +51,7 @@ byte comp::HuffmanRLE::read_symbol(
 	}
 }
 
-std::vector<byte> comp::HuffmanRLE::decompress(
+comp::HRLEDecompressionResult comp::HuffmanRLE::decompress(
 	const std::vector<byte>& bytes,
 	std::size_t offset,
 	std::size_t expected_size) const
@@ -96,5 +96,8 @@ std::vector<byte> comp::HuffmanRLE::decompress(
 		}
 	}
 
-	return result;
+	return HRLEDecompressionResult{
+		.bytes = result,
+		.offset_at_end = reader.byte_pos()
+	};
 }
