@@ -16,12 +16,12 @@ boo::Game boo::ROMParser::parse(const ht::htConfig& p_config,
 	std::size_t world_count{ p_config.count(ht::c::ID_WORLD_COUNT) };
 
 	// parse shared palette
-	const auto shared_pal_addr{ p_config.get_address(ht::c::ID_SHARED_BG_PALETTE_ADDR) };
+	const auto shared_pal_addr{ p_config.address(ht::c::ID_SHARED_BG_PALETTE_ADDR) };
 	const auto shared_pal_rom_offset{ mgr.cpu_addr_to_rom_offset(shared_pal_addr.bank, shared_pal_addr.addr) };
 	for (std::size_t i{ 0 }; i < 3; ++i)
 		game.shared_palette.push_back(p_rom.at(shared_pal_rom_offset + i));
 
-	const auto world_defs_addr{ p_config.get_address(ht::c::ID_WORLD_DEFINITIONS_ADDR) };
+	const auto world_defs_addr{ p_config.address(ht::c::ID_WORLD_DEFINITIONS_ADDR) };
 	std::size_t world_def_rom_offs{ mgr.cpu_addr_to_rom_offset(world_defs_addr.bank, world_defs_addr.addr) };
 
 	// parse world definitions
@@ -43,7 +43,7 @@ boo::Game boo::ROMParser::parse(const ht::htConfig& p_config,
 
 	// parse shared tilesets
 	std::size_t descr_count{ p_config.count(ht::c::ID_CHR_TRANSFERSCRIPT_COUNT) };
-	const auto descr_addr{ p_config.get_address(ht::c::ID_CHR_TRANSFERSCRIPT_ADDR) };
+	const auto descr_addr{ p_config.address(ht::c::ID_CHR_TRANSFERSCRIPT_ADDR) };
 	const auto descr_rom_offset{ mgr.cpu_addr_to_rom_offset(descr_addr.bank, descr_addr.addr) };
 	for (std::size_t i{ 0 }; i < descr_count; ++i) {
 		byte descriptor{ p_rom.at(descr_rom_offset + i) };
@@ -109,11 +109,12 @@ boo::World boo::ROMParser::parse_world(const std::vector<byte>& p_rom,
 	};
 
 	auto world_palette_cpu_offset{ world_data_cpu_offset + 5 * c::WORLD_METATILE_COUNT };
+	auto world_palette_rom_offset{ p_manager.cpu_addr_to_rom_offset(p_bank_no, world_palette_cpu_offset) };
 
 	for (std::size_t i{ 0 }; i < c::WORLD_PALETTE_BYTE_SIZE; i += c::WORLD_PALETTE_BYTE_SIZE / 3) {
 		std::vector<byte> wpalette;
 		for (std::size_t j{ 0 }; j < 3; ++j)
-			wpalette.push_back(p_rom.at(world_palette_cpu_offset + i * 3 + j));
+			wpalette.push_back(p_rom.at(world_palette_rom_offset + i + j));
 		world.world_palettes.push_back(wpalette);
 	}
 

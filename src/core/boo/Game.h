@@ -22,6 +22,9 @@ namespace boo {
 		std::vector<std::vector<nes::ChrTile>> sprite_chr;
 
 		Game(void) = default;
+
+		nes::Palette get_screen_palette(std::size_t p_world_no, std::size_t p_screen_no) const;
+		std::vector<nes::ChrTile> get_world_tileset(std::size_t p_world_no) const;
 	};
 
 }
