@@ -27,11 +27,11 @@ int main(int argc, char** argv) try {
 			l_wconf.set_defaults();
 			*/
 
-		l_window = SDL_CreateWindow("Hephaestus Toolworks (Workbench) alpha-1", 2048, 1024, SDL_WINDOW_RESIZABLE);
+		l_window = SDL_CreateWindow("Hephaestus Toolworks (Workbench) alpha-1", 1800, 1024, SDL_WINDOW_RESIZABLE);
 		if (l_window == nullptr)
 			throw std::runtime_error(SDL_GetError());
 		else {
-			SDL_SetWindowPosition(l_window, 1024, 100);
+			SDL_SetWindowPosition(l_window, 1624, 100);
 			if (false)
 				SDL_MaximizeWindow(l_window);
 

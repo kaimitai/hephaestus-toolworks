@@ -21,6 +21,8 @@ namespace boo {
 		// 3x3 palette indexes, bg col is $0f and the last sub-palette is shared at the game-level
 		std::vector<std::vector<byte>> world_palettes;
 
+		// door destinations
+		std::vector<byte> door_x, door_y, door_dest, door_ret;
 	};
 
 }

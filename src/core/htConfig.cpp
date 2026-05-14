@@ -12,7 +12,9 @@ ht::htConfig::htConfig(void) {
 	addresses = {
 		{c::ID_WORLD_DEFINITIONS_ADDR, Address(7, 0xcfb0)},
 		{c::ID_CHR_TRANSFERSCRIPT_ADDR, Address(7, 0xe633)},
-		{c::ID_SHARED_BG_PALETTE_ADDR, Address(7, 0xd016)}
+		{c::ID_SHARED_BG_PALETTE_ADDR, Address(7, 0xd016)},
+		{c::ID_SHARED_SPRITE_PALETTE_ADDR, Address(7, 0xc2f9)},
+		{c::ID_SPRITE_PALETTE_POOL, Address(7, 0xf53f)}
 	};
 
 	counts = {

@@ -21,6 +21,18 @@ boo::Game boo::ROMParser::parse(const ht::htConfig& p_config,
 	for (std::size_t i{ 0 }; i < 3; ++i)
 		game.shared_palette.push_back(p_rom.at(shared_pal_rom_offset + i));
 
+	// parse shared sprite palettes
+	const auto shared_spr_pal_addr{ p_config.address(ht::c::ID_SHARED_SPRITE_PALETTE_ADDR) };
+	const auto shared_spr_pal_rom_offset{ mgr.cpu_addr_to_rom_offset(shared_spr_pal_addr.bank, shared_spr_pal_addr.addr) };
+	game.shared_sprite_palettes.push_back(mgr.read_bytes(p_rom, shared_spr_pal_rom_offset, 3));
+	game.shared_sprite_palettes.push_back(mgr.read_bytes(p_rom, shared_spr_pal_rom_offset + 3, 3));
+
+	// parse sprite palette pool
+	const auto spr_pal_pool_addr{ p_config.address(ht::c::ID_SPRITE_PALETTE_POOL) };
+	const auto spr_pal_pool_rom_offset{ mgr.cpu_addr_to_rom_offset(spr_pal_pool_addr.bank, spr_pal_pool_addr.addr) };
+	game.sprite_palette_pool = mgr.read_bytes(p_rom, spr_pal_pool_rom_offset,
+		c::SPRITE_PALETTE_SHARED_SIZE);
+
 	const auto world_defs_addr{ p_config.address(ht::c::ID_WORLD_DEFINITIONS_ADDR) };
 	std::size_t world_def_rom_offs{ mgr.cpu_addr_to_rom_offset(world_defs_addr.bank, world_defs_addr.addr) };
 
@@ -119,6 +131,18 @@ boo::World boo::ROMParser::parse_world(const std::vector<byte>& p_rom,
 	}
 
 	auto transition_ptr_cpu_offset{ world_palette_cpu_offset + c::WORLD_PALETTE_BYTE_SIZE };
+
+	auto trans_x_cpu_addr{ p_manager.read_word(p_rom, p_bank_no, transition_ptr_cpu_offset) };
+	auto trans_y_cpu_addr{ p_manager.read_word(p_rom, p_bank_no, transition_ptr_cpu_offset + 2) };
+	auto trans_dest_cpu_addr{ p_manager.read_word(p_rom, p_bank_no, transition_ptr_cpu_offset + 4) };
+	auto trans_ret_cpu_addr{ p_manager.read_word(p_rom, p_bank_no, transition_ptr_cpu_offset + 6) };
+	std::size_t l_byte_cnt{ static_cast<std::size_t>(trans_y_cpu_addr) - trans_x_cpu_addr };
+
+	world.door_x = p_manager.read_bytes(p_rom, p_bank_no, trans_x_cpu_addr, l_byte_cnt);
+	world.door_y = p_manager.read_bytes(p_rom, p_bank_no, trans_y_cpu_addr, l_byte_cnt);
+	world.door_dest = p_manager.read_bytes(p_rom, p_bank_no, trans_dest_cpu_addr, l_byte_cnt);
+	world.door_ret = p_manager.read_bytes(p_rom, p_bank_no, trans_ret_cpu_addr, l_byte_cnt);
+
 	auto screen_ptrs_offset{ transition_ptr_cpu_offset + 4 * 2 };
 	auto screen_count{
 		p_manager.get_ptr_table_size(p_rom, p_bank_no, screen_ptrs_offset)
@@ -175,9 +199,57 @@ boo::World boo::ROMParser::parse_world(const std::vector<byte>& p_rom,
 			}
 		}
 
-		// parse transitions
-		// const auto transition_ptr_cpu_offset
+		// parse connections/transitions
+		auto scr_trans_ptr_offset{ screen_ptrs_offset + 2 * 3 * i + 2 };
+		auto screen_trans_cpu_offset{ p_manager.read_word(p_rom, p_bank_no, scr_trans_ptr_offset) };
+		auto scr_trans_rom_offset{ p_manager.cpu_addr_to_rom_offset(p_bank_no, screen_trans_cpu_offset) };
 
+		screen.minimap_x = p_rom.at(scr_trans_rom_offset);
+		screen.minimap_y = p_rom.at(scr_trans_rom_offset + 1);
+		screen.scroll_left = p_rom.at(scr_trans_rom_offset + 2) - 1;
+		screen.scroll_right = p_rom.at(scr_trans_rom_offset + 3) - 1;
+
+		for (std::size_t conn{ 4 }; ; ++conn) {
+			byte b{ p_rom.at(scr_trans_rom_offset + conn) };
+
+			if (b == 0x80)
+				break;
+			else if (b > 0x80) {
+				screen.door_idxs.push_back((b & 0x7f) - 1);
+				break;
+			}
+			else
+				screen.door_idxs.push_back(b - 1);
+		}
+
+		// parse sprites
+		auto scr_sprite_ptr_offset{ screen_ptrs_offset + 2 * 3 * i + 4 };
+		auto screen_sprite_cpu_offset{ p_manager.read_word(p_rom, p_bank_no, scr_sprite_ptr_offset) };
+		auto scr_sprite_rom_offset{ p_manager.cpu_addr_to_rom_offset(p_bank_no, screen_sprite_cpu_offset) };
+
+		for (std::size_t spr{ 0 }; ; spr += 3) {
+			bool last_entry{ false };
+
+			byte b{ p_rom.at(scr_sprite_rom_offset + spr) };
+
+			if (b == 0x80)
+				break;
+			else if (b > 0x80) {
+				last_entry = true;
+				b -= 0x80;
+			}
+
+			screen.sprites.push_back(Sprite{
+				.id = b,
+				.x_tile = p_rom.at(scr_sprite_rom_offset + spr + 1),
+				.y_pixel = p_rom.at(scr_sprite_rom_offset + spr + 2)
+				});
+
+			if (last_entry)
+				break;
+		}
+
+		// store screen
 		world.screens.push_back(screen);
 	}
 

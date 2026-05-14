@@ -23,6 +23,13 @@ namespace rom {
 
 		std::size_t get_ptr_table_size(const std::vector<byte>& p_rom,
 			std::size_t p_bank_no, cpu_addr p_cpu_addr) const;
+
+		std::vector<byte> read_bytes(const std::vector<byte>& p_rom,
+			std::size_t p_bank_no, cpu_addr p_cpu_addr, std::size_t p_byte_count) const;
+		std::vector<byte> read_bytes(const std::vector<byte>& p_rom,
+			std::size_t p_rom_offset, std::size_t p_byte_count) const;
+
+		static std::vector<byte> expand_rom(const std::vector<byte>& p_rom);
 	};
 
 }

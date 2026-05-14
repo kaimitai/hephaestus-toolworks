@@ -57,3 +57,34 @@ std::size_t rom::ROM_Manager::get_ptr_table_size(const std::vector<byte>& p_rom,
 
 	return result;
 }
+
+std::vector<byte> rom::ROM_Manager::read_bytes(const std::vector<byte>& p_rom,
+	std::size_t p_bank_no, cpu_addr p_cpu_addr, std::size_t p_byte_count) const {
+	return read_bytes(p_rom, cpu_addr_to_rom_offset(p_bank_no, p_cpu_addr), p_byte_count);
+}
+
+std::vector<byte> rom::ROM_Manager::read_bytes(const std::vector<byte>& p_rom,
+	std::size_t p_rom_offset, std::size_t p_byte_count) const {
+	return std::vector<byte>(begin(p_rom) + p_rom_offset,
+		begin(p_rom) + p_rom_offset + p_byte_count);
+}
+
+std::vector<byte> rom::ROM_Manager::expand_rom(const std::vector<byte>& p_rom) {
+	if (p_rom.size() != c::INES_HEADER_SIZE + c::BANK_SIZE * 8)
+		throw std::runtime_error("Can not expand ROM - bank count is not 8");
+
+	std::vector<byte> result{ p_rom };
+
+	// set prg bank count to 16
+	result.at(4) = 0x10;
+	// append 7 empty banks
+	for (std::size_t i{ 0 }; i < 0x4000 * 7; ++i)
+		result.push_back(0xff);
+	// copy current bank 7 to the end
+	for (std::size_t i{ 0 }; i < 0x4000; ++i)
+		result.push_back(result[7 * 0x4000 + 0x10 + i]);
+	// clear out bank 7
+	for (std::size_t i{ 0 }; i < 0x4000; ++i)
+		result[7 * 0x4000 + 0x10 + i] = 0xff;
+	return result;
+}

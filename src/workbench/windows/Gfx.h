@@ -32,6 +32,8 @@ namespace htw {
 		void render_tilemap_to_screen(SDL_Renderer* p_rnd, const boo::Screen& p_screen,
 			std::size_t p_offset);
 
+		void draw_rect_on_screen(SDL_Renderer* p_rnd, SDL_Color p_color, int x, int y, int w, int h) const;
+
 		void initialize_palette(const std::vector<SDL_Color>& p_colors);
 		void generate_metatile_textures(SDL_Renderer* p_rnd, const std::vector<boo::Metatile>& p_metatiles);
 		void generate_metatile_texture(SDL_Renderer* p_rnd, std::size_t p_idx, const boo::Metatile& p_metatile);

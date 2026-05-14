@@ -34,6 +34,19 @@ void htw::Gfx::render_tilemap_to_screen(SDL_Renderer* p_rnd, const boo::Screen& 
 	SDL_SetRenderTarget(p_rnd, nullptr);
 }
 
+void htw::Gfx::draw_rect_on_screen(SDL_Renderer* p_rnd, SDL_Color p_color, int pixel_x, int pixel_y, int pixel_w, int pixel_h) const {
+	SDL_SetRenderTarget(p_rnd, screen);
+	SDL_SetRenderDrawColor(p_rnd, p_color.r, p_color.g, p_color.b, p_color.a);
+
+	SDL_FRect l_rect(static_cast<float>(pixel_x),
+		static_cast<float>(pixel_y),
+		static_cast<float>(pixel_w),
+		static_cast<float>(pixel_h));
+
+	SDL_RenderRect(p_rnd, &l_rect);
+	SDL_SetRenderTarget(p_rnd, nullptr);
+}
+
 SDL_Surface* htw::Gfx::create_sdl_surface(int p_w, int p_h,
 	bool p_transparent, bool p_set_no_colorkey) const {
 	SDL_Surface* l_bmp = SDL_CreateSurface(p_w, p_h, SDL_PIXELFORMAT_ABGR8888);

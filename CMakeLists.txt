@@ -32,7 +32,7 @@ file(GLOB_RECURSE WORKBENCH_SOURCES CONFIGURE_DEPENDS
     src/workbench/*.cpp
 )
 
-add_executable(workbench ${WORKBENCH_SOURCES})
+add_executable(workbench WIN32 ${WORKBENCH_SOURCES})
 
 target_link_libraries(workbench
     PRIVATE
