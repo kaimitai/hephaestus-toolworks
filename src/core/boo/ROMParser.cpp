@@ -368,6 +368,71 @@ boo::AnimationFrame boo::ROMParser::parse_inline_descriptor_frame(
 	return result;
 }
 
+boo::AnimationFrame boo::ROMParser::parse_split_column_descriptor_frame(
+	const std::vector<byte>& rom, std::size_t frame_offset_table_rom_offset,
+	std::size_t descriptor_stream_rom_offset, std::size_t packed_tile_stream_rom_offset,
+	std::size_t column_y_rom_offset, std::size_t frame_index,
+	std::size_t column_count) const {
+	boo::AnimationFrame result;
+
+	const auto descriptor_rel =
+		rom.at(frame_offset_table_rom_offset + frame_index);
+
+	auto descriptor_offset =
+		descriptor_stream_rom_offset + descriptor_rel;
+
+	for (std::size_t col{ 0 }; col < column_count; ++col) {
+
+		const auto y_offset =
+			rom.at(column_y_rom_offset + col);
+
+		const auto height =
+			rom.at(descriptor_offset++);
+
+		const auto payload_offset =
+			rom.at(descriptor_offset++);
+
+		result.append_column(rom, packed_tile_stream_rom_offset + payload_offset,
+			static_cast<byte>(height), y_offset / 8);
+	}
+
+	return result;
+}
+
+boo::AnimationFrame boo::ROMParser::parse_column_layout_descriptor_frame(
+	const std::vector<byte>& p_rom,
+	std::size_t descriptor_block_offset,
+	std::size_t payload_base_offset,
+	std::size_t column_y_offset,
+	std::size_t column_count) const {
+	boo::AnimationFrame result;
+
+	for (std::size_t col{ 0 }; col < column_count; ++col) {
+
+		const auto y_offset_px{
+			p_rom.at(column_y_offset + col)
+		};
+
+		const auto column_height{
+			p_rom.at(descriptor_block_offset++)
+		};
+
+		const auto tile_data_offset{
+			payload_base_offset +
+			p_rom.at(descriptor_block_offset++)
+		};
+
+		result.append_column(
+			p_rom,
+			tile_data_offset,
+			static_cast<byte>(column_height),
+			static_cast<std::size_t>(y_offset_px / 8)
+		);
+	}
+
+	return result;
+}
+
 boo::AnimationFrame boo::ROMParser::parse_bull_frame(const std::vector<byte>& p_rom,
 	std::size_t frame_data_rom_offset, std::size_t tile_strm_rom_offset,
 	bool append_special) const {
@@ -420,16 +485,60 @@ std::vector<boo::AnimationFrame> boo::ROMParser::parse_two_tile_frames(byte star
 	return result;
 }
 
+std::vector<boo::AnimationFrame> boo::ROMParser::parse_mirrored_tile_frames(byte start_index,
+	std::size_t p_count, byte p_sub_palette) const {
+	std::vector<boo::AnimationFrame> result;
+
+	for (std::size_t i{ 0 }; i < p_count; ++i) {
+		boo::AnimationFrame frame;
+		frame.initialize(2, 1);
+		frame.tilemap[0][0] = Tile{
+			.idx = static_cast<byte>(start_index + i),
+			.pal = p_sub_palette,
+			.v_flip = false,
+			.h_flip = false };
+		frame.tilemap[0][1] = Tile{
+			.idx = static_cast<byte>(start_index + i),
+			.pal = p_sub_palette,
+			.v_flip = false,
+			.h_flip = true };
+
+		result.push_back(frame);
+	}
+
+	return result;
+}
+
+std::vector<boo::AnimationFrame> boo::ROMParser::parse_single_flip_tile_frames(byte start_index,
+	byte p_sub_palette) const {
+	std::vector<boo::AnimationFrame> result;
+
+	for (std::size_t i{ 0 }; i < 2; ++i) {
+		boo::AnimationFrame frame;
+		frame.initialize(1, 1);
+		frame.tilemap[0][0] = Tile{
+			.idx = static_cast<byte>(start_index),
+			.pal = p_sub_palette,
+			.v_flip = false,
+			.h_flip = (i == 1) };
+		result.push_back(frame);
+	}
+
+	return result;
+}
+
 std::vector<boo::AnimationFrame> boo::ROMParser::parse_animation_frames(const std::vector<byte>& p_rom,
 	const rom::ROM_Manager& p_manager, byte p_sprite_id, const ht::AnimationConfig& p_config) const {
 	std::vector<boo::AnimationFrame> frames;
 
 	std::optional<std::size_t> frame_rom_offset, tile_strm_rom_offset;
+	byte BANK_NO{ p_config.bank_override ? static_cast<byte>(0x07) : c::SPRITE_FRAME_BANK_NO };
+
 	if (p_config.frame_def_addr)
-		frame_rom_offset = p_manager.cpu_addr_to_rom_offset(c::SPRITE_FRAME_BANK_NO,
+		frame_rom_offset = p_manager.cpu_addr_to_rom_offset(BANK_NO,
 			p_config.frame_def_addr.value());
 	if (p_config.tile_entry_addr)
-		tile_strm_rom_offset = p_manager.cpu_addr_to_rom_offset(c::SPRITE_FRAME_BANK_NO,
+		tile_strm_rom_offset = p_manager.cpu_addr_to_rom_offset(BANK_NO,
 			p_config.tile_entry_addr.value());
 
 	if (p_config.style == ht::AnimationStyle::BullStyle) {
@@ -453,8 +562,92 @@ std::vector<boo::AnimationFrame> boo::ROMParser::parse_animation_frames(const st
 			));
 		}
 	}
+	else if (p_config.style == ht::AnimationStyle::SequentialDescriptorFrames) {
+
+		for (std::size_t i{ 0 }; i < p_config.frame_count; ++i) {
+
+			const auto descriptor_block_offset{
+				frame_rom_offset.value() + i * 2 * 4
+			};
+
+			frames.push_back(
+				parse_inline_descriptor_frame(
+					p_rom,
+					descriptor_block_offset,
+					tile_strm_rom_offset.value(),
+					p_config.column_count.value()
+				)
+			);
+		}
+	}
+	else if (p_config.style == ht::AnimationStyle::SplitColumnDescriptor) {
+
+		const auto column_y_rom_offset{
+			p_manager.cpu_addr_to_rom_offset(
+				c::SPRITE_FRAME_BANK_NO,
+				p_config.column_y_addr.value())
+		};
+
+		for (std::size_t i{ 0 }; i < p_config.frame_count; ++i) {
+
+			frames.push_back(
+				parse_split_column_descriptor_frame(
+					p_rom,
+					frame_rom_offset.value(),          // frame descriptor offset table
+					tile_strm_rom_offset.value(),      // descriptor stream base
+					tile_strm_rom_offset.value(),      // packed tile stream base
+					column_y_rom_offset,
+					i,
+					p_config.column_count.value()
+				)
+			);
+		}
+	}
+	else if (p_config.style == ht::AnimationStyle::ColumnLayoutDescriptorFrames) {
+
+		const auto column_y_rom_offset{
+			p_manager.cpu_addr_to_rom_offset(
+				c::SPRITE_FRAME_BANK_NO,
+				p_config.column_y_addr.value())
+		};
+
+		const auto column_count_rom_offset{
+			p_manager.cpu_addr_to_rom_offset(
+				c::SPRITE_FRAME_BANK_NO,
+				p_config.column_count_addr.value())
+		};
+
+		for (std::size_t i{ 0 }; i < p_config.frame_count; ++i) {
+
+			const auto column_count{
+				static_cast<std::size_t>(
+					p_rom.at(column_count_rom_offset + i))
+			};
+
+			const auto descriptor_offset{
+				tile_strm_rom_offset.value() +
+				p_rom.at(frame_rom_offset.value() + i)
+			};
+
+			frames.push_back(
+				parse_column_layout_descriptor_frame(
+					p_rom,
+					descriptor_offset,
+					tile_strm_rom_offset.value(),
+					column_y_rom_offset,
+					column_count
+				)
+			);
+		}
+	}
 	else if (p_config.style == ht::AnimationStyle::TwoTileContiguous) {
 		return parse_two_tile_frames(0, p_config.frame_count);
+	}
+	else if (p_config.style == ht::AnimationStyle::MirroredTile) {
+		return parse_mirrored_tile_frames(0, p_config.frame_count, 0x01);
+	}
+	else if (p_config.style == ht::AnimationStyle::SingleTileFlipAnimated) {
+		return parse_single_flip_tile_frames(0, 0x03);
 	}
 	else
 		throw std::runtime_error(std::format("Animation frame parser for sprite with id ${:02x} not implemented", p_sprite_id));

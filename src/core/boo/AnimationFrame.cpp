@@ -44,12 +44,17 @@ void boo::AnimationFrame::append_column(const std::vector<byte>& p_rom, std::siz
 		else if (y < total_h) {
 			const auto val{ p_rom.at(p_offset++) };
 
-			tilemap[y].emplace_back(Tile{
-				.idx = static_cast<byte>(val & 0x3f),
-				.pal = static_cast<byte>((val >> 6) & 0x03),
-				.v_flip = false,
-				.h_flip = false
-				});
+			if (val == 0xff) {
+				tilemap[y].emplace_back(std::nullopt);
+			}
+			else {
+				tilemap[y].emplace_back(Tile{
+					.idx = static_cast<byte>(val & 0x3f),
+					.pal = static_cast<byte>((val >> 6) & 0x03),
+					.v_flip = false,
+					.h_flip = false
+					});
+			}
 		}
 
 		// below strip -> empty

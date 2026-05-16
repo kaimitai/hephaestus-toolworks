@@ -10,13 +10,32 @@ using script::ArgType;
 ht::htConfig::htConfig(void) {
 	// TODO: Get from xml
 	sprite_chr_banks = {
+		{0x13, 0x14},  // dolphin
 		{0x14, 0x03},  // bull
+		{0x1a, 0x08},  // lamia
 		{0x26, 0x1a},  // worm
+		{0x28, 0x1b},  // bat
+		{0x29, 0x1c},  // snake
+		{0x2a, 0x1c},  // salamander
 		{0x2b, 0x1d},  // satyr
-		{0x2c, 0x28}   // ostrich
+		{0x2c, 0x28},  // ostrich
+		{0x40, 0x1c},  // snake (secondary?)
+		{0x47, 0x31},  // heroine statue
+		{0x48, 0x32}   // flame
 	};
 
 	animation_config = {
+		// dolphin
+		{0x13,
+		AnimationConfig {
+			.frame_count = 4,
+			.style = AnimationStyle::SequentialDescriptorFrames,
+			.frame_def_addr = 0xe8f5,
+			.tile_entry_addr = 0xe8df,
+			.column_count = 4,
+			.bank_override = true // data is stored in last bank
+			}
+		},
 		// bull
 		{0x14,
 		AnimationConfig {
@@ -26,11 +45,51 @@ ht::htConfig::htConfig(void) {
 			.tile_entry_addr = 0x9457
 			}
 		},
+		// lamia
+		{0x1a,
+		AnimationConfig{
+			.frame_count = 4,
+			.style = AnimationStyle::SplitColumnDescriptor,
+			.frame_def_addr = 0x9dac,        // frame descriptor stream offsets
+			.tile_entry_addr = 0x9db0,       // packed tile stream + descriptor stream base
+			.column_y_addr = 0x9da8,         // per-column Y offsets
+			.column_count = 4
+			}
+		},
 		// worm
 		{0x26,
 		AnimationConfig {
 			.frame_count = 3,
 			.style = AnimationStyle::TwoTileContiguous
+			}
+		},
+		// bat
+		{0x28,
+		AnimationConfig {
+			.frame_count = 4,
+			.style = AnimationStyle::MirroredTile
+			}
+		},
+		// snake (secondary?)
+		{0x29,
+		AnimationConfig {
+			.frame_count = 4,
+			.style = AnimationStyle::ColumnLayoutDescriptorFrames,
+			.frame_def_addr = 0xad7d,
+			.tile_entry_addr = 0xad85,
+			.column_y_addr = 0xad81,
+			.column_count_addr = 0xad79
+			}
+		},
+		// salamander
+		{0x2a,
+		AnimationConfig {
+			.frame_count = 4,
+			.style = AnimationStyle::ColumnLayoutDescriptorFrames,
+			.frame_def_addr = 0xad7d,
+			.tile_entry_addr = 0xad85,
+			.column_y_addr = 0xad81,
+			.column_count_addr = 0xad79
 			}
 		},
 		// satyr
@@ -49,6 +108,34 @@ ht::htConfig::htConfig(void) {
 			.style = AnimationStyle::StriderStyle,
 			.frame_def_addr = 0xadf3,
 			.tile_entry_addr = 0xadf5
+			}
+		},
+		// snake (secondary?)
+		{0x40,
+		AnimationConfig {
+			.frame_count = 4,
+			.style = AnimationStyle::ColumnLayoutDescriptorFrames,
+			.frame_def_addr = 0xad7d,
+			.tile_entry_addr = 0xad85,
+			.column_y_addr = 0xad81,
+			.column_count_addr = 0xad79
+			}
+		},
+		// heroine statue
+		{0x47,
+		AnimationConfig {
+			.frame_count = 1,
+			.style = AnimationStyle::SequentialDescriptorFrames,
+			.frame_def_addr = 0x97d9,
+			.tile_entry_addr = 0x97a4,
+			.column_count = 2
+			}
+		},
+		// flame
+		{0x48,
+		AnimationConfig {
+			.frame_count = 2,
+			.style = AnimationStyle::SingleTileFlipAnimated
 			}
 		}
 	};

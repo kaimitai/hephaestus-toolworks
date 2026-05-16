@@ -24,15 +24,18 @@ namespace ht {
 	};
 
 	enum class AnimationStyle {
-		BullStyle, StriderStyle, TwoTileContiguous
+		BullStyle, StriderStyle, TwoTileContiguous, MirroredTile,
+		SequentialDescriptorFrames, SplitColumnDescriptor, ColumnLayoutDescriptorFrames,
+		SingleTileFlipAnimated
 	};
 
 	struct AnimationConfig {
 		byte frame_count;
 		AnimationStyle style;
 
-		std::optional<cpu_addr> frame_def_addr;
-		std::optional<cpu_addr> tile_entry_addr;
+		std::optional<cpu_addr> frame_def_addr, tile_entry_addr,
+			column_y_addr, column_count, column_count_addr;
+		bool bank_override{ false };
 	};
 
 	struct RGBColor {
