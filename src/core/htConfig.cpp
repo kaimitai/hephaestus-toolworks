@@ -9,6 +9,50 @@ using script::ArgType;
 
 ht::htConfig::htConfig(void) {
 	// TODO: Get from xml
+	sprite_chr_banks = {
+		{0x14, 0x03},  // bull
+		{0x26, 0x1a},  // worm
+		{0x2b, 0x1d},  // satyr
+		{0x2c, 0x28}   // ostrich
+	};
+
+	animation_config = {
+		// bull
+		{0x14,
+		AnimationConfig {
+			.frame_count = 8,
+			.style = AnimationStyle::BullStyle,
+			.frame_def_addr = 0x943f,
+			.tile_entry_addr = 0x9457
+			}
+		},
+		// worm
+		{0x26,
+		AnimationConfig {
+			.frame_count = 3,
+			.style = AnimationStyle::TwoTileContiguous
+			}
+		},
+		// satyr
+		{0x2b,
+		AnimationConfig {
+			.frame_count = 2,
+			.style = AnimationStyle::StriderStyle,
+			.frame_def_addr = 0xadf1,
+			.tile_entry_addr = 0xadf5
+			}
+		},
+		// ostrich
+		{0x2c,
+		AnimationConfig {
+			.frame_count = 2,
+			.style = AnimationStyle::StriderStyle,
+			.frame_def_addr = 0xadf3,
+			.tile_entry_addr = 0xadf5
+			}
+		}
+	};
+
 	addresses = {
 		{c::ID_WORLD_DEFINITIONS_ADDR, Address(7, 0xcfb0)},
 		{c::ID_CHR_TRANSFERSCRIPT_ADDR, Address(7, 0xe633)},
@@ -187,6 +231,15 @@ ht::htConfig::htConfig(void) {
 
 const ht::ScriptConfig& ht::htConfig::get_script_config(void) const {
 	return scriptConfig;
+}
+
+byte ht::htConfig::get_sprite_chr_bank_id(byte p_sprite_no) const {
+	return sprite_chr_banks.at(p_sprite_no);
+}
+
+const std::unordered_map<byte, ht::AnimationConfig>&
+ht::htConfig::get_animation_config(void) const {
+	return animation_config;
 }
 
 std::size_t ht::htConfig::count(const std::string& p_id) const {

@@ -50,3 +50,15 @@ bool htw::ui::imgui_button(const std::string& p_label, byte p_style,
 
 	return l_result;
 }
+
+bool htw::ui::imgui_checkbox(const std::string& p_label, bool& p_val,
+	const std::string& p_tooltip) {
+
+	bool result{ ImGui::Checkbox(p_label.c_str(), &p_val) };
+
+	if (!p_tooltip.empty() && ImGui::IsItemHovered()) {
+		ImGui::SetTooltip(p_tooltip.c_str());
+	}
+
+	return result;
+}

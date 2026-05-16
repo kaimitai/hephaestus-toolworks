@@ -21,7 +21,8 @@ std::vector<nes::ChrTile> boo::Game::get_world_tileset(std::size_t p_world_no) c
 	return result;
 }
 
-nes::Palette boo::Game::get_screen_bg_palette(std::size_t p_world_no, std::size_t p_screen_no) const {
+nes::Palette boo::Game::get_screen_bg_palette(std::size_t p_world_no, std::size_t p_screen_no,
+	bool apply_overrides) const {
 	nes::Palette result;
 
 	for (std::size_t i{ 0 }; i < 3; ++i) {
@@ -37,8 +38,9 @@ nes::Palette boo::Game::get_screen_bg_palette(std::size_t p_world_no, std::size_
 
 	result.colors.push_back(subpal);
 
-	for (const auto& kv : worlds[p_world_no].screens.at(p_screen_no).palette_overrides)
-		result.colors.at(kv.first / 4).at(kv.first % 4) = kv.second;
+	if (apply_overrides)
+		for (const auto& kv : worlds[p_world_no].screens.at(p_screen_no).palette_overrides)
+			result.colors.at(kv.first / 4).at(kv.first % 4) = kv.second;
 
 	return result;
 }

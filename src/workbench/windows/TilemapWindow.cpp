@@ -2,6 +2,7 @@
 #include <core/klib/Kfile.h>
 #include <algorithm>
 #include <format>
+#include <utility>
 #include "./../ext/imgui/imgui.h"
 #include "./../ext/imgui/imgui_impl_sdl3.h"
 #include "./../ext/imgui/imgui_impl_sdlrenderer3.h"
@@ -23,9 +24,24 @@ void htw::MainWindow::draw_tilemap_window(SDL_Renderer* p_rnd) {
 	}
 
 	// draw sprites
+	std::vector<std::pair<int, int>> sprite_points;
 	for (const auto& spr : screen.sprites) {
+		int spr_x{ 8 * static_cast<int>(spr.x_tile) - static_cast<int>(16 * sel.x_offset) };
+		int spr_y{ static_cast<int>(spr.y_pixel) - 48 };
+
+		sprite_points.push_back(std::make_pair(
+			spr_x,
+			spr_y
+		));
+
 		gfx.draw_rect_on_screen(p_rnd, SDL_Color{ .r = 255, .g = 50, .b = 50, .a = 255 },
-			8 * spr.x_tile - 16 * sel.x_offset, spr.y_pixel - 48, 8, 8);
+			spr_x, spr_y, 8, 8);
+
+		auto iter{ game->sprite_animations.find(spr.id) };
+		if (iter != end(game->sprite_animations)) {
+			gfx.draw_sprite_on_screen(p_rnd, iter->first,
+				clock.cycle_index(iter->second.size(), 0.2), spr_x, spr_y);
+		}
 	}
 
 	ImGui::Begin("Tilemap");
@@ -47,6 +63,7 @@ void htw::MainWindow::draw_tilemap_window(SDL_Renderer* p_rnd) {
 
 			float local_x = mouse.x - top_left.x;
 			float local_y = mouse.y - top_left.y;
+			float world_pixel_x = local_x + 16 * sel.x_offset;
 
 			int mt_x = static_cast<int>(local_x) / 64;
 			int mt_y = static_cast<int>(local_y) / 64;
@@ -101,21 +118,29 @@ void htw::MainWindow::draw_tilemap_window(SDL_Renderer* p_rnd) {
 				}
 
 			}
+
+			float world_px_x{ world_pixel_x / 4 };
+			for (std::size_t i{ 0 }; i < sprite_points.size(); ++i)
+				if (world_px_x >= sprite_points[i].first && world_px_x < sprite_points[i].first + 8 &&
+					local_y / 4 >= sprite_points[i].second && local_y / 4 < sprite_points[i].second + 8) {
+					add_message(std::format("ID=${:2x}", screen.sprites.at(i).id), 6);
+				}
+
 		}
 	}
 
 	int w{ static_cast<int>(sel.world_no) };
 	int s{ static_cast<int>(sel.screen_no) };
 
-	if (ImGui::SliderInt("###screen", &s, 0, game->worlds.at(sel.world_no).screens.size() - 1)) {
-		sel.screen_no = static_cast<std::size_t>(s);
-		gfx_state.redraw = true;
-	}
-
 	if (ImGui::SliderInt("###world", &w, 0, 11)) {
 		sel.world_no = static_cast<std::size_t>(w);
 		sel.screen_no = std::clamp(sel.screen_no, static_cast<std::size_t>(0),
 			game->worlds.at(sel.world_no).screens.size() - 1);
+		gfx_state.redraw = true;
+	}
+
+	if (ImGui::SliderInt("###screen", &s, 0, game->worlds.at(sel.world_no).screens.size() - 1)) {
+		sel.screen_no = static_cast<std::size_t>(s);
 		gfx_state.redraw = true;
 	}
 
@@ -133,6 +158,10 @@ void htw::MainWindow::draw_tilemap_window(SDL_Renderer* p_rnd) {
 	ImGui::Text(std::format("Minimap: {},{}", screen.minimap_x, screen.minimap_y).c_str());
 	ImGui::Text(std::format("{} <-> {}", screen.scroll_left, screen.scroll_right).c_str());
 	ImGui::Text(std::format("Sprites: {}", screen.sprites.size()).c_str());
+
+	if (ui::imgui_checkbox("World Palette", settings.render_with_world_palette,
+		"Render without screen-specific palette overrides"))
+		gfx_state.redraw = true;
 
 	ImGui::End();
 }

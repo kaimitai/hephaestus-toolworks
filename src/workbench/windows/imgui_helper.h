@@ -24,6 +24,8 @@ namespace htw {
 
 		bool imgui_button(const std::string& p_label, byte p_style = 0,
 			const std::string& p_tooltip = std::string(), bool p_disabled = false);
+		bool imgui_checkbox(const std::string& p_label, bool& p_val,
+			const std::string& p_tooltip = std::string());
 	}
 
 }

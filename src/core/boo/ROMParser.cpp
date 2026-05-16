@@ -103,6 +103,16 @@ boo::Game boo::ROMParser::parse(const ht::htConfig& p_config,
 		game.sprite_chr.push_back(parse_chr_tiles(p_rom, rom_offset + 2, decomp_size));
 	}
 
+	// parse sprite animation frames
+	const auto& animconfig{ p_config.get_animation_config() };
+	for (const auto& kv : animconfig)
+		game.sprite_animations.insert(
+			std::make_pair(kv.first,
+				parse_animation_frames(p_rom, mgr, kv.first, kv.second)
+			)
+		);
+
+	parse_sprite_palette_overrides(p_rom, mgr, game);
 	return game;
 }
 
@@ -308,4 +318,146 @@ std::vector<nes::ChrTile> boo::ROMParser::parse_chr_tiles(const std::vector<byte
 		result.push_back(nes::ChrTile(chrbytes, i * 0x10));
 
 	return result;
+}
+
+void boo::ROMParser::parse_sprite_palette_overrides(const std::vector<byte>& p_rom,
+	const rom::ROM_Manager& p_manager,
+	boo::Game& game) const {
+	// TODO: Keep an eye on this - try to relocate when implementing patching
+	// hard coded in asm to be contiguous in bank 1, from master ptr 6
+	constexpr std::size_t SPRPAL_BANK{ 1 };
+	constexpr std::size_t SPRPAL_FIRST_PTR_ADDR{ 0x8000 + 2 * 0x06 };
+
+	for (std::size_t i{ 0 }; i < game.worlds.size(); ++i) {
+		auto cpu_addr{ p_manager.read_word(p_rom, SPRPAL_BANK, SPRPAL_FIRST_PTR_ADDR + 2 * i) };
+		auto paldata{ p_manager.read_bytes(p_rom, SPRPAL_BANK, cpu_addr,
+			2 * game.worlds[i].screens.size()) };
+
+		for (std::size_t j{ 0 }; j < game.worlds[i].screens.size(); ++j) {
+			game.worlds[i].screens[j].sprite_pal0_offset = paldata[j * 2];
+			game.worlds[i].screens[j].sprite_pal1_offset = paldata[j * 2 + 1];
+		}
+	}
+}
+
+void boo::ROMParser::append_frame_col_from_descriptor(boo::AnimationFrame& p_frame,
+	const std::vector<byte>& p_rom,
+	std::size_t tile_strm_rom_offset,
+	byte descriptor_index) const {
+	const auto descriptor_offset{ tile_strm_rom_offset + descriptor_index };
+
+	const auto column_height{ p_rom.at(descriptor_offset) };
+	const auto tile_data_offset{ tile_strm_rom_offset + p_rom.at(descriptor_offset + 1) };
+
+	p_frame.append_column(p_rom, tile_data_offset, column_height);
+}
+
+boo::AnimationFrame boo::ROMParser::parse_inline_descriptor_frame(
+	const std::vector<byte>& p_rom, std::size_t descriptor_block_offset,
+	std::size_t payload_base_offset, std::size_t column_count) const {
+	boo::AnimationFrame result;
+
+	for (std::size_t i{ 0 }; i < column_count; ++i) {
+
+		const auto column_height{ p_rom.at(descriptor_block_offset++) };
+		const auto tile_data_offset{ payload_base_offset + p_rom.at(descriptor_block_offset++) };
+
+		result.append_column(p_rom, tile_data_offset, static_cast<byte>(column_height));
+	}
+
+	return result;
+}
+
+boo::AnimationFrame boo::ROMParser::parse_bull_frame(const std::vector<byte>& p_rom,
+	std::size_t frame_data_rom_offset, std::size_t tile_strm_rom_offset,
+	bool append_special) const {
+	boo::AnimationFrame result;
+
+	// first entry expands into 3 consecutive descriptors.
+	const auto first_descriptor{ p_rom.at(frame_data_rom_offset++) };
+	for (std::size_t i{ 0 }; i < 3; ++i)
+		append_frame_col_from_descriptor(result, p_rom,
+			tile_strm_rom_offset, first_descriptor + 2 * i);
+
+	// remaining two are standalone descriptors.
+	append_frame_col_from_descriptor(result, p_rom,
+		tile_strm_rom_offset,
+		p_rom.at(frame_data_rom_offset++));
+	append_frame_col_from_descriptor(result, p_rom,
+		tile_strm_rom_offset,
+		p_rom.at(frame_data_rom_offset++));
+
+	if (append_special) {
+		result.append_column(p_rom,
+			tile_strm_rom_offset + 0x29,
+			2, 2);
+	}
+
+	return result;
+}
+
+std::vector<boo::AnimationFrame> boo::ROMParser::parse_two_tile_frames(byte start_index,
+	std::size_t p_count) const {
+	std::vector<boo::AnimationFrame> result;
+
+	for (std::size_t i{ 0 }; i < p_count; ++i) {
+		boo::AnimationFrame frame;
+		frame.initialize(2, 1);
+		frame.tilemap[0][0] = Tile{
+			.idx = static_cast<byte>(start_index + 2 * i),
+			.pal = 0,
+			.v_flip = false,
+			.h_flip = false };
+		frame.tilemap[0][1] = Tile{
+			.idx = static_cast<byte>(start_index + 2 * i + 1),
+			.pal = 0,
+			.v_flip = false,
+			.h_flip = false };
+
+		result.push_back(frame);
+	}
+
+	return result;
+}
+
+std::vector<boo::AnimationFrame> boo::ROMParser::parse_animation_frames(const std::vector<byte>& p_rom,
+	const rom::ROM_Manager& p_manager, byte p_sprite_id, const ht::AnimationConfig& p_config) const {
+	std::vector<boo::AnimationFrame> frames;
+
+	std::optional<std::size_t> frame_rom_offset, tile_strm_rom_offset;
+	if (p_config.frame_def_addr)
+		frame_rom_offset = p_manager.cpu_addr_to_rom_offset(c::SPRITE_FRAME_BANK_NO,
+			p_config.frame_def_addr.value());
+	if (p_config.tile_entry_addr)
+		tile_strm_rom_offset = p_manager.cpu_addr_to_rom_offset(c::SPRITE_FRAME_BANK_NO,
+			p_config.tile_entry_addr.value());
+
+	if (p_config.style == ht::AnimationStyle::BullStyle) {
+		for (std::size_t i{ 0 }; i < p_config.frame_count; ++i)
+			frames.push_back(parse_bull_frame(p_rom, frame_rom_offset.value() + 3 * i,
+				tile_strm_rom_offset.value(), i == 5 || i == 6));
+	}
+	else if (p_config.style == ht::AnimationStyle::StriderStyle) {
+
+		for (std::size_t i{ 0 }; i < p_config.frame_count; ++i) {
+			const auto descriptor_block_offset{
+				tile_strm_rom_offset.value() +
+				p_rom.at(frame_rom_offset.value() + i)
+			};
+
+			frames.push_back(parse_inline_descriptor_frame(
+				p_rom,
+				descriptor_block_offset,
+				tile_strm_rom_offset.value(),
+				2
+			));
+		}
+	}
+	else if (p_config.style == ht::AnimationStyle::TwoTileContiguous) {
+		return parse_two_tile_frames(0, p_config.frame_count);
+	}
+	else
+		throw std::runtime_error(std::format("Animation frame parser for sprite with id ${:02x} not implemented", p_sprite_id));
+
+	return frames;
 }

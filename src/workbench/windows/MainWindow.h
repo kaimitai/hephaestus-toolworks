@@ -9,6 +9,8 @@
 #include <optional>
 #include <string>
 #include "Gfx.h"
+#include "Clock.h"
+#include "./../EditorSettings.h"
 
 using byte = uint8_t;
 
@@ -39,6 +41,8 @@ namespace htw {
 		std::deque<htw::Message> messages;
 		EditorGfxState gfx_state;
 		EditorSelectors sel;
+		EditorSettings settings;
+		Clock clock;
 
 		void draw_tilemap_window(SDL_Renderer* p_rnd);
 		void draw_control_window(SDL_Renderer* p_rnd);

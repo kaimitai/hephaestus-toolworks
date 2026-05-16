@@ -47,6 +47,24 @@ void htw::Gfx::draw_rect_on_screen(SDL_Renderer* p_rnd, SDL_Color p_color, int p
 	SDL_SetRenderTarget(p_rnd, nullptr);
 }
 
+void htw::Gfx::draw_sprite_on_screen(SDL_Renderer* p_rnd, byte p_sprite_no,
+	std::size_t p_frame_no, int x, int y) {
+	auto iter{ sprite_frames.find(p_sprite_no) };
+	if (iter != end(sprite_frames) && p_frame_no < iter->second.size()) {
+		const auto txt{ iter->second[p_frame_no] };
+		SDL_FRect dst{
+			static_cast<float>(x),
+			static_cast<float>(y),
+			static_cast<float>(txt->w),
+			static_cast<float>(txt->h)
+		};
+
+		SDL_SetRenderTarget(p_rnd, screen);
+		SDL_RenderTexture(p_rnd, txt, nullptr, &dst);
+		SDL_SetRenderTarget(p_rnd, nullptr);
+	}
+}
+
 SDL_Surface* htw::Gfx::create_sdl_surface(int p_w, int p_h,
 	bool p_transparent, bool p_set_no_colorkey) const {
 	SDL_Surface* l_bmp = SDL_CreateSurface(p_w, p_h, SDL_PIXELFORMAT_ABGR8888);
@@ -77,6 +95,61 @@ void htw::Gfx::put_nes_pixel(SDL_Surface* srf, int x, int y, byte p_palette_inde
 			m_hot_pink.b,
 			m_hot_pink.a
 		);
+}
+
+void htw::Gfx::draw_nes_tile_on_surface(SDL_Surface* p_srf, int dst_x, int dst_y,
+	const nes::ChrTile& tile, const std::vector<byte>& p_palette,
+	bool p_transparent, bool h_flip, bool v_flip) const {
+
+	for (int y = 0; y < 8; ++y) {
+		for (int x = 0; x < 8; ++x) {
+			int src_x = h_flip ? 7 - x : x;
+			int src_y = v_flip ? 7 - y : y;
+
+			byte color = tile.get_color(src_x, src_y);
+			byte palette_index = p_palette.at(color);
+
+			put_nes_pixel(p_srf, dst_x + x, dst_y + y, palette_index,
+				p_transparent && (color == 0));
+		}
+	}
+}
+
+// sprite rendering
+SDL_Surface* htw::Gfx::gen_sprite_frame_surface(const boo::AnimationFrame& p_frame,
+	const std::vector<nes::ChrTile> p_tiles,
+	const std::vector<std::vector<byte>>& p_palette) const {
+	int width = 8 * static_cast<int>(p_frame.w());
+	int height = 8 * static_cast<int>(p_frame.h());
+
+	auto srf{ create_sdl_surface(width, height, true) };
+
+	for (std::size_t j{ 0 }; j < p_frame.tilemap.size(); ++j)
+		for (std::size_t i{ 0 }; i < p_frame.tilemap[j].size(); ++i) {
+			if (p_frame.tilemap[j][i] && p_frame.tilemap[j][i]->idx < p_tiles.size())
+				draw_nes_tile_on_surface(srf, static_cast<int>(8 * i), static_cast<int>(8 * j),
+					p_tiles.at(p_frame.tilemap[j][i]->idx),
+					p_palette.at(p_frame.tilemap[j][i]->pal),
+					true,
+					p_frame.tilemap[j][i]->h_flip, p_frame.tilemap[j][i]->v_flip);
+		}
+
+	return srf;
+}
+
+void htw::Gfx::generate_sprite_frame_textures(SDL_Renderer* p_rnd,
+	byte p_sprite_id, const std::vector<nes::ChrTile>& tiles, const nes::Palette& palette,
+	const std::vector<boo::AnimationFrame>& frames) {
+	std::vector<SDL_Texture*> textures;
+
+	for (const auto& frame : frames)
+		textures.push_back(surface_to_texture(p_rnd,
+			gen_sprite_frame_surface(frame, tiles, palette.colors)));
+
+	for (auto& txt : sprite_frames[p_sprite_id])
+		delete_texture(txt);
+
+	sprite_frames[p_sprite_id] = textures;
 }
 
 void htw::Gfx::generate_metatile_textures(SDL_Renderer* p_rnd,

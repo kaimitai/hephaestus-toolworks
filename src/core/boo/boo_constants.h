@@ -17,6 +17,7 @@ namespace boo {
 		constexpr std::size_t BANK_COUNT{ 8 };
 		constexpr std::size_t WORLD_TILESET_CHR_COUNT{ 0x40 };
 		constexpr std::size_t SPRITE_PALETTE_SHARED_SIZE{ 36 * 3 };
+		constexpr byte SPRITE_FRAME_BANK_NO{ 0 };
 		constexpr byte SHARED_BG_PALETTE_COLOR{ 0x0f };
 
 		// screen decode VM
