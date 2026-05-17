@@ -30,6 +30,7 @@ namespace boo {
 			const rom::ROM_Manager& p_manager,
 			boo::Game& game) const;
 
+		boo::Tile decode_packed_sprite_tile(byte p_val) const;
 		void append_frame_col_from_descriptor(boo::AnimationFrame& p_frame,
 			const std::vector<byte>& p_rom,
 			std::size_t tile_strm_rom_offset,
@@ -42,17 +43,28 @@ namespace boo {
 			std::size_t descriptor_stream_rom_offset, std::size_t packed_tile_stream_rom_offset,
 			std::size_t column_y_rom_offset, std::size_t frame_index,
 			std::size_t column_count) const;
+		boo::AnimationFrame parse_split_column_descriptor_frame_fixed_stride(
+			const std::vector<byte>& rom,
+			std::size_t descriptor_stream_rom_offset,
+			std::size_t packed_tile_stream_rom_offset,
+			std::size_t column_y_rom_offset,
+			std::size_t column_y_layout_selector_rom_offset,
+			std::size_t frame_index,
+			std::size_t column_count) const;
 		boo::AnimationFrame parse_column_layout_descriptor_frame(
 			const std::vector<byte>& p_rom,
 			std::size_t descriptor_block_offset,
 			std::size_t payload_base_offset,
 			std::size_t column_y_offset,
 			std::size_t column_count) const;
+		boo::AnimationFrame parse_cyclops_frame(const std::vector<byte>& rom,
+			std::size_t frame_offset_table_rom_offset, std::size_t data_base_rom_offset,
+			std::size_t frame_index) const;
 		boo::AnimationFrame parse_bull_frame(const std::vector<byte>& p_rom,
 			std::size_t frame_data_rom_offset, std::size_t tile_strm_rom_offset,
 			bool append_special) const;
 		std::vector<AnimationFrame> parse_two_tile_frames(byte start_index,
-			std::size_t p_count) const;
+			std::size_t p_count, byte p_sub_palette) const;
 		std::vector<AnimationFrame> parse_mirrored_tile_frames(byte start_index,
 			std::size_t p_count, byte p_sub_palette) const;
 		std::vector<AnimationFrame> parse_single_flip_tile_frames(byte start_index,

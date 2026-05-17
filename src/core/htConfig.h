@@ -24,9 +24,10 @@ namespace ht {
 	};
 
 	enum class AnimationStyle {
-		BullStyle, StriderStyle, TwoTileContiguous, MirroredTile,
+		BullStyle, StriderStyle, TwoTileContiguous, MirroredTile, CyclopsStyle,
 		SequentialDescriptorFrames, SplitColumnDescriptor, ColumnLayoutDescriptorFrames,
-		SingleTileFlipAnimated
+		SingleTileFlipAnimated, TwoColumnFixedFrames, MirroredQuadrant2x2,
+		BubbleStyle, SingleStaticTile, ItemType, LionStyle
 	};
 
 	struct AnimationConfig {
@@ -34,7 +35,9 @@ namespace ht {
 		AnimationStyle style;
 
 		std::optional<cpu_addr> frame_def_addr, tile_entry_addr,
-			column_y_addr, column_count, column_count_addr;
+			column_y_addr, column_count, column_count_addr,
+			column_y_layout_selector_rom_offset,
+			start_chr_index, sub_palette;
 		bool bank_override{ false };
 	};
 

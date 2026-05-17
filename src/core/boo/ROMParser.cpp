@@ -3,6 +3,7 @@
 #include "./../compression/HuffmanRLE.h"
 #include "./../compression/RLE.h"
 #include "./../config_constants.h"
+#include <array>
 #include <stdexcept>
 #include <string>
 #include <format>
@@ -340,6 +341,15 @@ void boo::ROMParser::parse_sprite_palette_overrides(const std::vector<byte>& p_r
 	}
 }
 
+boo::Tile boo::ROMParser::decode_packed_sprite_tile(byte p_val) const {
+	return Tile{
+		.idx = static_cast<byte>(p_val & 0x3f),
+		.pal = static_cast<byte>((p_val >> 6) & 0x03),
+		.v_flip = false,
+		.h_flip = false
+	};
+}
+
 void boo::ROMParser::append_frame_col_from_descriptor(boo::AnimationFrame& p_frame,
 	const std::vector<byte>& p_rom,
 	std::size_t tile_strm_rom_offset,
@@ -399,6 +409,65 @@ boo::AnimationFrame boo::ROMParser::parse_split_column_descriptor_frame(
 	return result;
 }
 
+boo::AnimationFrame
+boo::ROMParser::parse_split_column_descriptor_frame_fixed_stride(
+	const std::vector<byte>& rom,
+	std::size_t descriptor_stream_rom_offset,
+	std::size_t packed_tile_stream_rom_offset,
+	std::size_t column_y_rom_offset,
+	std::size_t column_y_layout_selector_rom_offset,
+	std::size_t frame_index,
+	std::size_t column_count) const {
+
+	boo::AnimationFrame result;
+
+	auto descriptor_offset{
+		descriptor_stream_rom_offset +
+		frame_index * column_count * 2
+	};
+
+	const auto layout_rel{
+		rom.at(
+			column_y_layout_selector_rom_offset +
+			(frame_index % 3))
+	};
+
+	const auto effective_column_y_rom_offset{
+		column_y_rom_offset + layout_rel
+	};
+
+	for (std::size_t col{ 0 }; col < column_count; ++col) {
+
+		auto y_offset{
+			rom.at(effective_column_y_rom_offset + col)
+		};
+
+		if ((frame_index == 1 || frame_index == 3) && col == 2) {
+			y_offset += 8;
+		}
+
+		const auto height{
+			rom.at(descriptor_offset++)
+		};
+
+		const auto payload_offset{
+			rom.at(descriptor_offset++)
+		};
+
+		result.append_column(
+			rom,
+			packed_tile_stream_rom_offset + payload_offset,
+			static_cast<byte>(height),
+			y_offset / 8
+		);
+	}
+
+	if (frame_index == 3)
+		result.append_column({ 0x09 }, 0, 1, 3);
+
+	return result;
+}
+
 boo::AnimationFrame boo::ROMParser::parse_column_layout_descriptor_frame(
 	const std::vector<byte>& p_rom,
 	std::size_t descriptor_block_offset,
@@ -427,6 +496,42 @@ boo::AnimationFrame boo::ROMParser::parse_column_layout_descriptor_frame(
 			tile_data_offset,
 			static_cast<byte>(column_height),
 			static_cast<std::size_t>(y_offset_px / 8)
+		);
+	}
+
+	return result;
+}
+
+boo::AnimationFrame boo::ROMParser::parse_cyclops_frame(
+	const std::vector<byte>& rom,
+	std::size_t frame_offset_table_rom_offset,
+	std::size_t data_base_rom_offset,
+	std::size_t frame_index) const {
+
+	AnimationFrame result;
+
+	const auto descriptor_rel{
+		rom.at(frame_offset_table_rom_offset + frame_index)
+	};
+
+	auto descriptor_offset{
+		data_base_rom_offset + descriptor_rel
+	};
+
+	for (std::size_t col{ 0 }; col < 3; ++col) {
+
+		const auto height{
+			rom.at(descriptor_offset++)
+		};
+
+		const auto payload_rel{
+			rom.at(descriptor_offset++)
+		};
+
+		result.append_column(
+			rom,
+			data_base_rom_offset + payload_rel,
+			static_cast<byte>(height)
 		);
 	}
 
@@ -462,7 +567,7 @@ boo::AnimationFrame boo::ROMParser::parse_bull_frame(const std::vector<byte>& p_
 }
 
 std::vector<boo::AnimationFrame> boo::ROMParser::parse_two_tile_frames(byte start_index,
-	std::size_t p_count) const {
+	std::size_t p_count, byte p_sub_palette) const {
 	std::vector<boo::AnimationFrame> result;
 
 	for (std::size_t i{ 0 }; i < p_count; ++i) {
@@ -470,12 +575,12 @@ std::vector<boo::AnimationFrame> boo::ROMParser::parse_two_tile_frames(byte star
 		frame.initialize(2, 1);
 		frame.tilemap[0][0] = Tile{
 			.idx = static_cast<byte>(start_index + 2 * i),
-			.pal = 0,
+			.pal = p_sub_palette,
 			.v_flip = false,
 			.h_flip = false };
 		frame.tilemap[0][1] = Tile{
 			.idx = static_cast<byte>(start_index + 2 * i + 1),
-			.pal = 0,
+			.pal = p_sub_palette,
 			.v_flip = false,
 			.h_flip = false };
 
@@ -567,7 +672,7 @@ std::vector<boo::AnimationFrame> boo::ROMParser::parse_animation_frames(const st
 		for (std::size_t i{ 0 }; i < p_config.frame_count; ++i) {
 
 			const auto descriptor_block_offset{
-				frame_rom_offset.value() + i * 2 * 4
+				frame_rom_offset.value() + i * 2 * p_config.column_count.value_or(4)
 			};
 
 			frames.push_back(
@@ -640,14 +745,220 @@ std::vector<boo::AnimationFrame> boo::ROMParser::parse_animation_frames(const st
 			);
 		}
 	}
+	else if (p_config.style == ht::AnimationStyle::TwoColumnFixedFrames) {
+
+		std::vector<byte> frame_offsets;
+
+		if (p_config.frame_def_addr) {
+			frame_offsets =
+				p_manager.read_bytes(
+					p_rom,
+					BANK_NO,
+					p_config.frame_def_addr.value(),
+					p_config.frame_count
+				);
+		}
+
+		for (std::size_t i{ 0 }; i < p_config.frame_count; ++i) {
+
+			AnimationFrame frame;
+			frame.initialize(2, 2);
+
+			const auto tile_offset{
+				tile_strm_rom_offset.value() +
+				(
+					p_config.frame_def_addr
+					? frame_offsets[i]
+					: static_cast<byte>(i * 4)
+				)
+			};
+
+			for (std::size_t y{ 0 }; y < 2; ++y) {
+				for (std::size_t x{ 0 }; x < 2; ++x) {
+
+					frame.tilemap[y][x] =
+						decode_packed_sprite_tile(
+							p_rom.at(tile_offset + y * 2 + x)
+						);
+				}
+			}
+
+			frames.push_back(std::move(frame));
+		}
+
+	}
+	else if (p_config.style == ht::AnimationStyle::MirroredQuadrant2x2) {
+		AnimationFrame frame;
+		frame.initialize(4, 4);
+
+		auto decode = [&](std::size_t offs) {
+			return decode_packed_sprite_tile(
+				p_rom.at(tile_strm_rom_offset.value() + offs)
+			);
+			};
+
+		// frame 0
+		std::array<Tile, 4> f0{
+			decode(0),
+			decode(1),
+			decode(2),
+			decode(3)
+		};
+
+		// frame 1
+		std::array<Tile, 4> f1{
+			decode(4),
+			decode(5),
+			decode(6),
+			decode(7)
+		};
+
+		auto apply = [](Tile t, bool h, bool v) {
+
+			t.h_flip ^= h;
+			t.v_flip ^= v;
+			return t;
+			};
+
+		for (std::size_t i{ 0 }; i < 4; ++i) {
+
+			const auto x{ i % 2 };
+			const auto y{ i / 2 };
+
+			// top-left
+			frame.tilemap[1 - y][x] =
+				apply(f0[i], false, true);
+
+			// top-right
+			frame.tilemap[1 - y][x + 2] =
+				apply(f1[i], true, true);
+
+			// bottom-left
+			frame.tilemap[y + 2][x] =
+				f0[i];
+
+			// bottom-right
+			frame.tilemap[y + 2][x + 2] =
+				apply(f1[i], true, false);
+		}
+
+		frames.push_back(std::move(frame));
+	}
+	else if (p_config.style == ht::AnimationStyle::CyclopsStyle) {
+
+		for (std::size_t i{ 0 }; i < p_config.frame_count; ++i) {
+
+			frames.push_back(
+				parse_cyclops_frame(
+					p_rom,
+					frame_rom_offset.value(),
+					tile_strm_rom_offset.value(),
+					i
+				)
+			);
+		}
+	}
+	else if (p_config.style == ht::AnimationStyle::BubbleStyle) {
+
+		for (std::size_t i{ 0 }; i < 2; ++i) {
+
+			AnimationFrame frame;
+			frame.initialize(2, 2);
+
+			// lower animated pair
+			frame.tilemap[1][0] = Tile{
+				.idx = static_cast<byte>(i),
+				.pal = 1
+			};
+
+			frame.tilemap[1][1] = Tile{
+				.idx = static_cast<byte>(i),
+				.pal = 1
+			};
+
+			// top bubble cap
+			frame.tilemap[0][0] = Tile{
+				.idx = 2,
+				.pal = 1
+			};
+
+			// empty top-right
+			frame.tilemap[0][1] = Tile{
+				.idx = 0xff
+			};
+
+			frames.push_back(frame);
+		}
+	}
 	else if (p_config.style == ht::AnimationStyle::TwoTileContiguous) {
-		return parse_two_tile_frames(0, p_config.frame_count);
+		return parse_two_tile_frames(p_config.start_chr_index.value_or(0),
+			p_config.frame_count,
+			p_config.sub_palette.value_or(0));
 	}
 	else if (p_config.style == ht::AnimationStyle::MirroredTile) {
 		return parse_mirrored_tile_frames(0, p_config.frame_count, 0x01);
 	}
 	else if (p_config.style == ht::AnimationStyle::SingleTileFlipAnimated) {
 		return parse_single_flip_tile_frames(0, 0x03);
+	}
+	else if (p_config.style == ht::AnimationStyle::SingleStaticTile) {
+
+		boo::AnimationFrame frame;
+		frame.initialize(1, 1);
+
+		frame.tilemap[0][0] = Tile{
+			.idx = static_cast<byte>(p_config.start_chr_index.value_or(0)),
+			.pal = static_cast<byte>(p_config.sub_palette.value_or(0))
+		};
+
+		frames.push_back(frame);
+	}
+	else if (p_config.style == ht::AnimationStyle::ItemType) {
+
+		boo::AnimationFrame frame;
+		frame.initialize(2, 2);
+
+		byte subpal{ static_cast<byte>(p_config.sub_palette.value_or(0)) };
+		byte chr_offset{ static_cast<byte>(p_config.start_chr_index.value_or(0)) };
+
+		for (byte b{ 0 }; b < 4; ++b) {
+			frame.tilemap[b / 2][b % 2] = Tile{
+				.idx = static_cast<byte>(b + chr_offset),
+				.pal = subpal
+			};
+		}
+
+		frames.push_back(frame);
+	}
+	else if (p_config.style ==
+		ht::AnimationStyle::LionStyle) {
+
+		const auto column_y_rom_offset{
+			p_manager.cpu_addr_to_rom_offset(
+				BANK_NO,
+				p_config.column_y_addr.value())
+		};
+
+		const auto column_y_layout_selector_rom_offset{
+			p_manager.cpu_addr_to_rom_offset(
+				BANK_NO,
+				p_config.frame_def_addr.value())
+		};
+
+		for (std::size_t i{ 0 }; i < p_config.frame_count; ++i) {
+
+			frames.push_back(
+				parse_split_column_descriptor_frame_fixed_stride(
+					p_rom,
+					frame_rom_offset.value(),
+					tile_strm_rom_offset.value(),
+					column_y_rom_offset,
+					column_y_layout_selector_rom_offset,
+					i,
+					p_config.column_count.value()
+				)
+			);
+		}
 	}
 	else
 		throw std::runtime_error(std::format("Animation frame parser for sprite with id ${:02x} not implemented", p_sprite_id));

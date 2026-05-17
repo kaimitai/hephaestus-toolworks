@@ -10,21 +10,74 @@ using script::ArgType;
 ht::htConfig::htConfig(void) {
 	// TODO: Get from xml
 	sprite_chr_banks = {
+		{0x04, 0x16},  // fountain (synthetic overlay)
+		{0x09, 0x13},  // water bubble
+		{0x0b, 0x25},  // arrow (tiny spear guy)
+		{0x0f, 0x2c},  // flower projectile
 		{0x13, 0x14},  // dolphin
 		{0x14, 0x03},  // bull
 		{0x1a, 0x08},  // lamia
+		{0x18, 0x05},  // cyclops #1
+		{0x19, 0x06},  // lion
 		{0x26, 0x1a},  // worm
+		{0x27, 0x20},  // caterpillar
 		{0x28, 0x1b},  // bat
 		{0x29, 0x1c},  // snake
 		{0x2a, 0x1c},  // salamander
 		{0x2b, 0x1d},  // satyr
 		{0x2c, 0x28},  // ostrich
+		{0x2d, 0x1e},  // fish
+		{0x2e, 0x1f},  // monkey
+		{0x2f, 0x26},  // flying eye
+		{0x30, 0x21},  // spiderweb
+		{0x32, 0x25},  // tiny spear guy
+		{0x33, 0x27},  // butterfly
+		{0x34, 0x29},  // scorpion
+		{0x35, 0x2a},  // gargoyle
+		{0x38, 0x2c},  // flower
+		{0x3b, 0x05},  // cyclops #2
 		{0x40, 0x1c},  // snake (secondary?)
+		{0x41, 0x05},  // cyclops #3
+		{0x44, 0x33},  // moon
 		{0x47, 0x31},  // heroine statue
-		{0x48, 0x32}   // flame
+		{0x48, 0x32},  // flame
+		{0x4b, 0x15},  // arrow (lamia)
 	};
 
 	animation_config = {
+		// fountain (synthetic overlay)
+		{ 0x04,
+		AnimationConfig {
+			.frame_count = 1,
+			.style = AnimationStyle::ItemType,
+			.sub_palette = 1
+			}
+		},
+		// water bubble
+		{0x09,
+		AnimationConfig {
+			.frame_count = 2,
+			.style = AnimationStyle::BubbleStyle
+			}
+		},
+		// arrow (tiny spear guy)
+		{0x0b,
+		AnimationConfig {
+			.frame_count = 1,
+			.style = AnimationStyle::TwoTileContiguous,
+			.start_chr_index = 11,
+			.sub_palette = 3
+			}
+		},
+		// flower projectile
+		{0x0f,
+		AnimationConfig {
+			.frame_count = 1,
+			.style = AnimationStyle::SingleStaticTile,
+			.start_chr_index = 6,
+			.sub_palette = 3
+			}
+		},
 		// dolphin
 		{0x13,
 		AnimationConfig {
@@ -45,6 +98,34 @@ ht::htConfig::htConfig(void) {
 			.tile_entry_addr = 0x9457
 			}
 		},
+		// cyclops #1
+		{0x18,
+		AnimationConfig {
+			.frame_count = 3,
+			.style = AnimationStyle::CyclopsStyle,
+			.frame_def_addr = 0x9a92,
+			.tile_entry_addr = 0x9a95
+			}
+		},
+		// lion
+		{
+			0x19,
+			AnimationConfig{
+				.frame_count = 4,
+				.style = AnimationStyle::LionStyle,
+
+				// descriptor blocks
+				.frame_def_addr = 0x9cbf,
+
+				// payload tile streams
+				.tile_entry_addr = 0x9c92,
+
+				// y-offset table base
+				.column_y_addr = 0x9c8b,
+
+				.column_count = 4
+			}
+		},
 		// lamia
 		{0x1a,
 		AnimationConfig{
@@ -61,6 +142,14 @@ ht::htConfig::htConfig(void) {
 		AnimationConfig {
 			.frame_count = 3,
 			.style = AnimationStyle::TwoTileContiguous
+			}
+		},
+		// caterpillar
+		{0x27,
+		AnimationConfig {
+			.frame_count = 3,
+			.style = AnimationStyle::TwoColumnFixedFrames,
+			.tile_entry_addr = 0xafb2
 			}
 		},
 		// bat
@@ -110,6 +199,94 @@ ht::htConfig::htConfig(void) {
 			.tile_entry_addr = 0xadf5
 			}
 		},
+			{
+	0x2d,
+	AnimationConfig{
+			.frame_count = 3,
+			.style = AnimationStyle::SequentialDescriptorFrames,
+			.frame_def_addr = 0xae8f,
+			.tile_entry_addr = 0xae83,
+			.column_count = 3
+			}
+		},
+		// monkey
+		{0x2e,
+		AnimationConfig {
+			.frame_count = 2,
+			.style = AnimationStyle::TwoColumnFixedFrames,
+			.tile_entry_addr = 0xaf40
+			}
+		},
+		// flying eye
+		{0x2f,
+			AnimationConfig{
+				.frame_count = 4,
+				.style = AnimationStyle::TwoColumnFixedFrames,
+				.tile_entry_addr = 0xb653
+			}
+		},
+		// spiderweb
+		{0x30,
+		AnimationConfig {
+			.frame_count = 1,
+			.style = AnimationStyle::MirroredQuadrant2x2,
+			.tile_entry_addr = 0xb047
+			}
+		},
+		// tiny spear guy
+		{0x32,
+		AnimationConfig {
+			.frame_count = 4,
+			.style = AnimationStyle::TwoColumnFixedFrames,
+			.frame_def_addr = 0xb487,
+			.tile_entry_addr = 0xb497
+			}
+		},
+		// butterfly
+		{ 0x33,
+		AnimationConfig {
+			.frame_count = 2,
+			.style = AnimationStyle::TwoColumnFixedFrames,
+			.tile_entry_addr = 0xb52d
+			}
+		},
+		// scorpion
+		{ 0x34,
+		AnimationConfig {
+			.frame_count = 4,
+			.style = AnimationStyle::TwoColumnFixedFrames,
+			.tile_entry_addr = 0xb5ca
+			}
+		},
+		// gargoyle
+		{ 0x35,
+		AnimationConfig{
+		.frame_count = 2,
+		.style = AnimationStyle::SequentialDescriptorFrames,
+		.frame_def_addr = 0xb64b,
+		.tile_entry_addr = 0xb63b,
+		.column_count = 2
+			}
+		},
+		// flower
+		{ 0x38,
+		AnimationConfig {
+			.frame_count = 3,
+			.style = AnimationStyle::SequentialDescriptorFrames,
+			.frame_def_addr = 0xb80d,
+			.tile_entry_addr = 0xb7f5,
+			.column_count = 2
+			}
+		},
+		// cyclops #2
+		{ 0x3b,
+		AnimationConfig {
+			.frame_count = 3,
+			.style = AnimationStyle::CyclopsStyle,
+			.frame_def_addr = 0x9a92,
+			.tile_entry_addr = 0x9a95
+			}
+		},
 		// snake (secondary?)
 		{0x40,
 		AnimationConfig {
@@ -119,6 +296,25 @@ ht::htConfig::htConfig(void) {
 			.tile_entry_addr = 0xad85,
 			.column_y_addr = 0xad81,
 			.column_count_addr = 0xad79
+			}
+		},
+		// cyclops #3
+		{ 0x41,
+		AnimationConfig {
+			.frame_count = 3,
+			.style = AnimationStyle::CyclopsStyle,
+			.frame_def_addr = 0x9a92,
+			.tile_entry_addr = 0x9a95
+			}
+		},
+		// moon
+		{0x44,
+		AnimationConfig {
+			.frame_count = 1,
+			.style = AnimationStyle::SequentialDescriptorFrames,
+			.frame_def_addr = 0x9902,
+			.tile_entry_addr = 0x98f9,
+			.column_count = 3
 			}
 		},
 		// heroine statue
@@ -136,6 +332,14 @@ ht::htConfig::htConfig(void) {
 		AnimationConfig {
 			.frame_count = 2,
 			.style = AnimationStyle::SingleTileFlipAnimated
+			}
+		},
+		// arrow (lamia)
+		{ 0x4b,
+		AnimationConfig {
+			.frame_count = 1,
+			.style = AnimationStyle::TwoTileContiguous,
+			.sub_palette = 3
 			}
 		}
 	};
